@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
 
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const apiKey = process.env.IMGBB_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Image upload not configured' }, { status: 500 });
     }
 
     const formData = await req.formData();
@@ -29,21 +32,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'File too large. Maximum 5MB.' }, { status: 400 });
     }
 
+    // Convert to base64
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const base64 = Buffer.from(bytes).toString('base64');
 
-    // Generate unique filename
-    const ext = file.type.split('/')[1] === 'jpeg' ? 'jpg' : file.type.split('/')[1];
-    const filename = `${session.user.id}-${Date.now()}.${ext}`;
+    // Upload to imgBB
+    const imgbbForm = new FormData();
+    imgbbForm.append('key', apiKey);
+    imgbbForm.append('image', base64);
+    imgbbForm.append('name', `avatar-${session.user.id}-${Date.now()}`);
 
-    // Ensure directory exists
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'avatars');
-    await mkdir(uploadDir, { recursive: true });
+    const imgbbRes = await fetch('https://api.imgbb.com/1/upload', {
+      method: 'POST',
+      body: imgbbForm,
+    });
 
-    const filepath = path.join(uploadDir, filename);
-    await writeFile(filepath, buffer);
+    const imgbbData = await imgbbRes.json();
 
-    const avatarUrl = `/uploads/avatars/${filename}`;
+    if (!imgbbData.success) {
+      console.error('imgBB upload failed:', imgbbData);
+      return NextResponse.json({ error: 'Image upload failed' }, { status: 500 });
+    }
+
+    const avatarUrl = imgbbData.data.display_url;
 
     // Update user avatar in database
     await prisma.user.update({

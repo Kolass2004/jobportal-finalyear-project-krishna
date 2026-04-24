@@ -9,7 +9,15 @@ let prismaClient: PrismaClient;
 
 if (!globalForPrisma.prisma) {
   const dbUrl = process.env.DATABASE_URL || 'file:./dev.db';
-  const adapter = new PrismaLibSql({ url: dbUrl });
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+
+  // Pass authToken for remote Turso databases (libsql:// URLs)
+  const adapterConfig: { url: string; authToken?: string } = { url: dbUrl };
+  if (authToken) {
+    adapterConfig.authToken = authToken;
+  }
+
+  const adapter = new PrismaLibSql(adapterConfig);
   prismaClient = new PrismaClient({ adapter } as any);
 
   if (process.env.NODE_ENV !== 'production') {
@@ -21,3 +29,4 @@ if (!globalForPrisma.prisma) {
 
 export const prisma = prismaClient;
 export default prisma;
+
