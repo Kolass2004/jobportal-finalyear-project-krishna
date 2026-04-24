@@ -48,7 +48,7 @@ export default function SignupPage() {
           <div className="w-9 h-9 bg-notion-blue rounded-lg flex items-center justify-center text-white">
             <Briefcase size={20} />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-notion-text">HireFlow</h1>
+          <h1 className="text-xl font-bold tracking-tight text-notion-text">Krishnakanth Job portal</h1>
         </div>
 
         <h2 className="text-2xl font-semibold text-center mb-2 tracking-tight text-notion-text">Create an account</h2>
