@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/Toast';
-import { MapPin, Mail, Phone, Briefcase, GraduationCap, Loader2, Save, Plus, Trash2, X } from 'lucide-react';
+import ImageCropper from '@/components/ImageCropper';
+import { MapPin, Mail, Phone, Briefcase, GraduationCap, Loader2, Save, Plus, Trash2, X, Camera } from 'lucide-react';
 
 interface ExperienceEntry {
   title: string;
@@ -30,6 +31,9 @@ export default function ProfilePage() {
   const [educations, setEducations] = useState<EducationEntry[]>([]);
   const [skillInput, setSkillInput] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const role = (session?.user as any)?.role;
 
@@ -158,6 +162,49 @@ export default function ProfilePage() {
 
   const initials = (name: string) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
 
+  // Avatar upload handlers
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      addToast('Please select a JPEG, PNG, or WebP image', 'error');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      addToast('Image must be under 10MB', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setCropSrc(reader.result as string);
+    reader.readAsDataURL(file);
+    // Reset input so same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleCropDone = async (blob: Blob) => {
+    setCropSrc(null);
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', blob, 'avatar.webp');
+      const res = await fetch('/api/upload/avatar', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        setUser((prev: any) => ({ ...prev, avatar: data.avatar }));
+        addToast('Profile picture updated!', 'success');
+      } else {
+        addToast(data.error || 'Upload failed', 'error');
+      }
+    } catch {
+      addToast('Upload failed', 'error');
+    }
+    setUploadingAvatar(false);
+  };
+
   if (loading) return <div className="flex items-center justify-center min-h-[400px]"><div className="spinner w-8 h-8 border-[3px]" /></div>;
 
   return (
@@ -177,11 +224,52 @@ export default function ProfilePage() {
         )}
       </div>
 
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
+      {/* Image Cropper Modal */}
+      {cropSrc && (
+        <ImageCropper
+          imageSrc={cropSrc}
+          onCropDone={handleCropDone}
+          onCancel={() => setCropSrc(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-start gap-5 pb-6 border-b border-notion-border mb-6">
-        <div className="w-20 h-20 rounded-full bg-notion-blue-bg text-notion-blue flex items-center justify-center text-2xl font-bold flex-shrink-0">
-          {initials(user?.name)}
-        </div>
+        <button
+          type="button"
+          onClick={handleAvatarClick}
+          disabled={uploadingAvatar}
+          className="relative w-20 h-20 rounded-full flex-shrink-0 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-notion-blue focus:ring-offset-2 transition-all"
+          title="Change profile picture"
+        >
+          {user?.avatar ? (
+            <img
+              src={user.avatar}
+              alt={user.name}
+              className="w-20 h-20 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-notion-blue-bg text-notion-blue flex items-center justify-center text-2xl font-bold">
+              {initials(user?.name)}
+            </div>
+          )}
+          <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-all">
+            {uploadingAvatar ? (
+              <Loader2 size={22} className="text-white animate-spin" />
+            ) : (
+              <Camera size={20} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+          </div>
+        </button>
         <div className="flex-1">
           {editing ? (
             <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="notion-input text-xl font-bold mb-2" />

@@ -153,9 +153,13 @@ export default function Sidebar() {
             href="/profile"
             className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors hover:bg-notion-bg-hover mt-1 ${collapsed ? 'justify-center px-2' : ''}`}
           >
-            <div className="w-8 h-8 rounded-full bg-notion-blue-bg text-notion-blue flex items-center justify-center text-xs font-semibold flex-shrink-0">
-              {initials}
-            </div>
+            {(session?.user as any)?.image ? (
+              <img src={(session.user as any).image} alt={userName} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-notion-blue-bg text-notion-blue flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                {initials}
+              </div>
+            )}
             {!collapsed && (
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-notion-text truncate">{userName}</div>
