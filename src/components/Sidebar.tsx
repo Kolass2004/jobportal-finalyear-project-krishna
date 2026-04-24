@@ -154,7 +154,7 @@ export default function Sidebar() {
             className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors hover:bg-notion-bg-hover mt-1 ${collapsed ? 'justify-center px-2' : ''}`}
           >
             {(session?.user as any)?.image ? (
-              <img src={(session.user as any).image} alt={userName} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+              <img src={(session?.user as any)?.image} alt={userName} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
             ) : (
               <div className="w-8 h-8 rounded-full bg-notion-blue-bg text-notion-blue flex items-center justify-center text-xs font-semibold flex-shrink-0">
                 {initials}
