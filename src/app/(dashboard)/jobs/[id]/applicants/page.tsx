@@ -1,0 +1,90 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useToast } from '@/components/Toast';
+import { ArrowLeft, Check, X, User } from 'lucide-react';
+
+export default function ApplicantsPage() {
+  const { id } = useParams();
+  const router = useRouter();
+  const { addToast } = useToast();
+  const [applicants, setApplicants] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/jobs/${id}/applicants`).then(r => r.json()).then(setApplicants).finally(() => setLoading(false));
+  }, [id]);
+
+  const updateStatus = async (appId: string, status: string) => {
+    const res = await fetch(`/api/applications/${appId}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (res.ok) {
+      setApplicants(prev => prev.map(a => a.id === appId ? { ...a, status } : a));
+      addToast(`Application ${status.toLowerCase()}`, 'success');
+    }
+  };
+
+  const statusBadge = (status: string) => {
+    const map: Record<string, string> = {
+      PENDING: 'badge-pending', REVIEWED: 'badge-reviewed', SHORTLISTED: 'badge-shortlisted',
+      ACCEPTED: 'badge-accepted', REJECTED: 'badge-rejected',
+    };
+    return map[status] || 'badge-pending';
+  };
+
+  if (loading) return <div className="flex items-center justify-center min-h-[300px]"><div className="spinner w-8 h-8 border-[3px]" /></div>;
+
+  return (
+    <div className="max-w-[800px]">
+      <button onClick={() => router.back()} className="flex items-center gap-2 text-notion-text-secondary text-sm mb-5 hover:text-notion-text">
+        <ArrowLeft size={16} /> Back
+      </button>
+      <h1 className="text-3xl font-bold tracking-tight text-notion-text mb-2">Applicants</h1>
+      <p className="text-notion-text-secondary mb-8">{applicants.length} applications received</p>
+
+      <div className="space-y-3">
+        {applicants.map((app) => (
+          <div key={app.id} className="flex items-center gap-4 p-4 border border-notion-border rounded-lg bg-notion-bg hover:shadow-sm transition-all">
+            <div className="w-10 h-10 rounded-full bg-notion-blue-bg text-notion-blue flex items-center justify-center text-sm font-semibold flex-shrink-0">
+              {app.user?.name?.[0]?.toUpperCase() || 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-notion-text">{app.user?.name}</h3>
+              <p className="text-xs text-notion-text-secondary">{app.user?.email} · {app.user?.location || 'No location'}</p>
+              {app.coverLetter && (
+                <p className="text-xs text-notion-text-tertiary mt-1 line-clamp-2">{app.coverLetter}</p>
+              )}
+            </div>
+            <span className={statusBadge(app.status)}>{app.status}</span>
+            <div className="flex gap-1">
+              <select
+                value={app.status}
+                onChange={(e) => updateStatus(app.id, e.target.value)}
+                className="notion-select text-xs py-1 w-auto"
+              >
+                <option value="PENDING">Pending</option>
+                <option value="REVIEWED">Reviewed</option>
+                <option value="SHORTLISTED">Shortlisted</option>
+                <option value="ACCEPTED">Accepted</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+              <button onClick={() => router.push(`/users/${app.user?.id}`)} className="btn-ghost p-1.5" title="View Profile">
+                <User size={14} />
+              </button>
+            </div>
+          </div>
+        ))}
+        {applicants.length === 0 && (
+          <div className="text-center py-16">
+            <User size={40} className="mx-auto mb-4 text-notion-text-tertiary opacity-40" />
+            <h3 className="text-lg font-semibold text-notion-text mb-2">No applicants yet</h3>
+            <p className="text-sm text-notion-text-secondary">Applications will appear here once candidates apply</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

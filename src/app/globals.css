@@ -1,26 +1,207 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'SFMono-Regular', 'Consolas', 'Liberation Mono', monospace;
+
+  /* Notion-style colors */
+  --color-notion-bg: #ffffff;
+  --color-notion-bg-secondary: #f7f6f3;
+  --color-notion-bg-tertiary: #f1f1ef;
+  --color-notion-bg-hover: rgba(55, 53, 47, 0.04);
+  --color-notion-bg-active: rgba(55, 53, 47, 0.08);
+  --color-notion-sidebar: #f7f6f3;
+
+  --color-notion-text: #37352f;
+  --color-notion-text-secondary: #6b6b6b;
+  --color-notion-text-tertiary: #9b9a97;
+  --color-notion-text-placeholder: #b4b4b0;
+
+  --color-notion-border: #e9e5e0;
+  --color-notion-border-light: #f0efec;
+
+  --color-notion-blue: #2383e2;
+  --color-notion-blue-hover: #1b6ec2;
+  --color-notion-blue-bg: rgba(35, 131, 226, 0.08);
+  --color-notion-green: #0f7b6c;
+  --color-notion-green-bg: rgba(15, 123, 108, 0.08);
+  --color-notion-red: #eb5757;
+  --color-notion-red-bg: rgba(235, 87, 87, 0.08);
+  --color-notion-yellow: #dfab01;
+  --color-notion-yellow-bg: rgba(223, 171, 1, 0.08);
+  --color-notion-purple: #6940a5;
+  --color-notion-purple-bg: rgba(105, 64, 165, 0.08);
+  --color-notion-orange: #e9730f;
+  --color-notion-orange-bg: rgba(233, 115, 15, 0.08);
+  --color-notion-pink: #ad1a72;
+  --color-notion-pink-bg: rgba(173, 26, 114, 0.08);
+
+  /* Dark mode colors */
+  --color-dark-bg: #191919;
+  --color-dark-bg-secondary: #202020;
+  --color-dark-bg-tertiary: #2f2f2f;
+  --color-dark-bg-hover: rgba(255, 255, 255, 0.055);
+  --color-dark-bg-active: rgba(255, 255, 255, 0.09);
+  --color-dark-text: #e8e6e3;
+  --color-dark-text-secondary: #9b9a97;
+  --color-dark-text-tertiary: #6b6b6b;
+  --color-dark-border: #373737;
+  --color-dark-border-light: #2f2f2f;
+  --color-dark-card: #252525;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-notion-text);
+    background-color: var(--color-notion-bg);
+  }
+
+  /* Dark theme */
+  .dark body,
+  .dark {
+    --color-notion-bg: var(--color-dark-bg);
+    --color-notion-bg-secondary: var(--color-dark-bg-secondary);
+    --color-notion-bg-tertiary: var(--color-dark-bg-tertiary);
+    --color-notion-bg-hover: var(--color-dark-bg-hover);
+    --color-notion-bg-active: var(--color-dark-bg-active);
+    --color-notion-sidebar: var(--color-dark-bg-secondary);
+    --color-notion-text: var(--color-dark-text);
+    --color-notion-text-secondary: var(--color-dark-text-secondary);
+    --color-notion-text-tertiary: var(--color-dark-text-tertiary);
+    --color-notion-border: var(--color-dark-border);
+    --color-notion-border-light: var(--color-dark-border-light);
+    color: var(--color-dark-text);
+    background-color: var(--color-dark-bg);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-notion-border);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-notion-text-tertiary);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Notion-style input */
+  .notion-input {
+    @apply w-full px-3 py-2 rounded-md border border-notion-border bg-notion-bg text-notion-text text-sm outline-none transition-all duration-150;
+  }
+  .notion-input:focus {
+    @apply border-notion-blue shadow-[0_0_0_3px_rgba(35,131,226,0.08)];
+  }
+  .notion-input::placeholder {
+    color: var(--color-notion-text-placeholder);
+  }
+
+  /* Notion-style textarea */
+  .notion-textarea {
+    @apply w-full px-3 py-2 rounded-md border border-notion-border bg-notion-bg text-notion-text text-sm outline-none transition-all duration-150 resize-y min-h-[80px] leading-relaxed;
+  }
+  .notion-textarea:focus {
+    @apply border-notion-blue shadow-[0_0_0_3px_rgba(35,131,226,0.08)];
+  }
+
+  /* Notion-style select */
+  .notion-select {
+    @apply w-full px-3 py-2 rounded-md border border-notion-border bg-notion-bg text-notion-text text-sm outline-none cursor-pointer appearance-none pr-8 transition-all duration-150;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+  }
+  .notion-select:focus {
+    @apply border-notion-blue shadow-[0_0_0_3px_rgba(35,131,226,0.08)];
+  }
+
+  /* Button variants */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium bg-notion-blue text-white transition-all duration-150 hover:bg-notion-blue-hover disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium bg-notion-bg-tertiary text-notion-text border border-notion-border transition-all duration-150 hover:bg-notion-bg-active disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium text-notion-text-secondary bg-transparent transition-all duration-150 hover:bg-notion-bg-hover hover:text-notion-text disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium bg-notion-red text-white transition-all duration-150 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-success {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-1.5 rounded-md text-sm font-medium bg-notion-green text-white transition-all duration-150 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Status badges */
+  .badge-pending {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-notion-yellow-bg text-notion-yellow;
+  }
+  .badge-reviewed {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-notion-blue-bg text-notion-blue;
+  }
+  .badge-shortlisted {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-notion-purple-bg text-notion-purple;
+  }
+  .badge-accepted {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-notion-green-bg text-notion-green;
+  }
+  .badge-rejected {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-notion-red-bg text-notion-red;
+  }
+
+  /* Sidebar item */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-1.5 rounded-md text-sm text-notion-text-secondary transition-all duration-150 cursor-pointer w-full text-left;
+  }
+  .sidebar-item:hover {
+    @apply bg-notion-bg-hover text-notion-text;
+  }
+  .sidebar-item.active {
+    @apply bg-notion-bg-active text-notion-text font-medium;
+  }
+
+  /* Notion card */
+  .notion-card {
+    @apply bg-notion-bg border border-notion-border rounded-lg p-5 transition-shadow duration-200;
+  }
+  .notion-card:hover {
+    @apply shadow-sm;
+  }
+
+  /* Spinner */
+  .spinner {
+    @apply w-5 h-5 border-2 border-notion-border border-t-notion-blue rounded-full animate-spin;
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply rounded-md animate-pulse;
+    background: linear-gradient(90deg, var(--color-notion-bg-tertiary) 25%, var(--color-notion-bg-secondary) 50%, var(--color-notion-bg-tertiary) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+  }
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
