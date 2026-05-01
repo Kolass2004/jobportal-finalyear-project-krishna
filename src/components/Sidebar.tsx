@@ -86,7 +86,7 @@ export default function Sidebar() {
           {!collapsed && (
             <Link href="/dashboard" className="flex items-center gap-2 font-bold text-[15px] text-notion-text tracking-tight">
               <div className="w-6 h-6 bg-notion-blue rounded flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                K
+                T
               </div>
               Job portal
             </Link>
