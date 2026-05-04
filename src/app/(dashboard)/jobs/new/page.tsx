@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/Toast';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles } from 'lucide-react';
 
 export default function NewJobPage() {
   const router = useRouter();
@@ -18,6 +18,32 @@ export default function NewJobPage() {
     location: '', salaryMin: '', salaryMax: '', remote: false, skills: '', deadline: '',
   });
   const [newCompany, setNewCompany] = useState({ name: '', industry: '', location: '', website: '', size: '' });
+  const [generatingAi, setGeneratingAi] = useState(false);
+
+  const generateAiDescription = async () => {
+    if (!form.title) {
+      addToast('Please enter a Job Title first', 'error');
+      return;
+    }
+    setGeneratingAi(true);
+    try {
+      const res = await fetch('/api/jobs/ai-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: form.title, type: form.type, skills: form.skills }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setForm(f => ({ ...f, description: data.description }));
+        addToast('AI Description generated!', 'success');
+      } else {
+        addToast(data.error || 'Failed to generate description', 'error');
+      }
+    } catch {
+      addToast('Something went wrong', 'error');
+    }
+    setGeneratingAi(false);
+  };
 
   useEffect(() => {
     fetch('/api/companies').then(r => r.json()).then(data => {
@@ -100,7 +126,18 @@ export default function NewJobPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-notion-text mb-2">Description *</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-notion-text">Description *</label>
+            <button
+              type="button"
+              onClick={generateAiDescription}
+              disabled={generatingAi}
+              className="text-xs flex items-center gap-1 text-notion-purple hover:text-notion-purple/80 font-medium"
+            >
+              {generatingAi ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              {generatingAi ? 'Generating...' : '✨ Generate with AI'}
+            </button>
+          </div>
           <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="notion-textarea min-h-[200px]" placeholder="Use ## for headings, - for bullet points" required />
           <p className="text-xs text-notion-text-tertiary mt-1">Supports basic markdown: ## Heading, - list item</p>
         </div>

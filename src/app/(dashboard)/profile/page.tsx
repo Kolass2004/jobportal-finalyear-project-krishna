@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/Toast';
 import ImageCropper from '@/components/ImageCropper';
-import { MapPin, Mail, Phone, Briefcase, GraduationCap, Loader2, Save, Plus, Trash2, X, Camera } from 'lucide-react';
+import { MapPin, Mail, Phone, Briefcase, GraduationCap, Loader2, Save, Plus, Trash2, X, Camera, Sparkles, Bot } from 'lucide-react';
 
 interface ExperienceEntry {
   title: string;
@@ -33,6 +33,8 @@ export default function ProfilePage() {
   const [skills, setSkills] = useState<string[]>([]);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const role = (session?.user as any)?.role;
@@ -105,6 +107,44 @@ export default function ProfilePage() {
       location: user?.location || '',
       headline: user?.jobseekerProfile?.headline || '',
       portfolioUrl: user?.jobseekerProfile?.portfolioUrl || '',
+    });
+  };
+
+  const handleOptimizeProfile = async () => {
+    setOptimizing(true);
+    try {
+      const payload = {
+        name: user?.name,
+        headline: user?.jobseekerProfile?.headline,
+        bio: user?.bio,
+        skills: user?.jobseekerProfile?.skills,
+        experience: user?.jobseekerProfile?.experience,
+        education: user?.jobseekerProfile?.education,
+      };
+      const res = await fetch('/api/profile/ai-optimize', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAiSuggestion(data.suggestion);
+        addToast('AI Analysis complete!', 'success');
+      } else {
+        addToast(data.error || 'Failed to optimize profile', 'error');
+      }
+    } catch {
+      addToast('Something went wrong', 'error');
+    }
+    setOptimizing(false);
+  };
+  
+  const renderMarkdown = (text: string) => {
+    return text.split('\n').map((line, i) => {
+      if (line.startsWith('## ')) return <h4 key={i} className="font-semibold mt-3 mb-1 text-notion-text">{line.slice(3)}</h4>;
+      if (line.startsWith('### ')) return <h5 key={i} className="font-semibold mt-2 mb-1 text-notion-text">{line.slice(4)}</h5>;
+      if (line.startsWith('- ')) return <li key={i} className="ml-4 list-disc mb-1">{line.slice(2)}</li>;
+      if (line.trim() === '') return <div key={i} className="h-2" />;
+      return <p key={i} className="mb-1">{line}</p>;
     });
   };
 
@@ -212,7 +252,15 @@ export default function ProfilePage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-notion-text">My Profile</h1>
         {!editing ? (
-          <button onClick={() => setEditing(true)} className="btn-primary">Edit Profile</button>
+          <div className="flex gap-2">
+            {role === 'JOBSEEKER' && (
+              <button onClick={handleOptimizeProfile} disabled={optimizing} className="btn-secondary flex items-center gap-2 text-notion-purple hover:border-notion-purple/50">
+                {optimizing ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                {optimizing ? 'Analyzing...' : 'AI Optimizer'}
+              </button>
+            )}
+            <button onClick={() => setEditing(true)} className="btn-primary">Edit Profile</button>
+          </div>
         ) : (
           <div className="flex gap-2">
             <button onClick={handleCancel} className="btn-secondary">Cancel</button>
@@ -240,6 +288,18 @@ export default function ProfilePage() {
           onCropDone={handleCropDone}
           onCancel={() => setCropSrc(null)}
         />
+      )}
+
+      {/* AI Suggestions Box */}
+      {aiSuggestion && !editing && (
+        <div className="mb-8 p-5 bg-notion-purple-bg/30 border border-notion-purple/20 rounded-xl">
+          <div className="flex items-center gap-2 mb-3 text-notion-purple font-semibold">
+            <Bot size={18} /> AI Profile Feedback
+          </div>
+          <div className="text-sm text-notion-text-secondary leading-relaxed">
+            {renderMarkdown(aiSuggestion)}
+          </div>
+        </div>
       )}
 
       {/* Header */}

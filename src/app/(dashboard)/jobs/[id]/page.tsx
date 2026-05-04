@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/Toast';
-import { ArrowLeft, MapPin, Briefcase, Clock, Wifi, DollarSign, Users, Bookmark, BookmarkCheck, Send, Building2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, MapPin, Briefcase, Clock, Wifi, DollarSign, Users, Bookmark, BookmarkCheck, Send, Building2, ExternalLink, Sparkles, Bot, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function JobDetailPage() {
@@ -17,6 +17,9 @@ export default function JobDetailPage() {
   const [applying, setApplying] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
+  const [analyzingMatch, setAnalyzingMatch] = useState(false);
+  const [aiMatch, setAiMatch] = useState<any>(null);
+  const [generatingCoverLetter, setGeneratingCoverLetter] = useState(false);
 
   const role = (session?.user as any)?.role;
 
@@ -55,6 +58,39 @@ export default function JobDetailPage() {
     const data = await res.json();
     setJob({ ...job, isSaved: data.saved });
     addToast(data.saved ? 'Job saved' : 'Job removed from saved', 'info');
+  };
+
+  const handleAnalyzeMatch = async () => {
+    setAnalyzingMatch(true);
+    try {
+      const res = await fetch(`/api/jobs/${id}/ai-match`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setAiMatch(data);
+      } else {
+        addToast(data.error || 'Failed to analyze match', 'error');
+      }
+    } catch {
+      addToast('Something went wrong', 'error');
+    }
+    setAnalyzingMatch(false);
+  };
+
+  const handleGenerateCoverLetter = async () => {
+    setGeneratingCoverLetter(true);
+    try {
+      const res = await fetch(`/api/jobs/${id}/ai-cover-letter`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setCoverLetter(data.coverLetter);
+        addToast('Cover letter generated!', 'success');
+      } else {
+        addToast(data.error || 'Failed to generate', 'error');
+      }
+    } catch {
+      addToast('Something went wrong', 'error');
+    }
+    setGeneratingCoverLetter(false);
   };
 
   if (loading) {
@@ -129,6 +165,10 @@ export default function JobDetailPage() {
                   {job.isSaved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
                   {job.isSaved ? 'Saved' : 'Save'}
                 </button>
+                <button onClick={handleAnalyzeMatch} disabled={analyzingMatch} className="btn-secondary flex items-center gap-2 text-notion-purple hover:border-notion-purple/50">
+                  {analyzingMatch ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  {analyzingMatch ? 'Analyzing...' : 'AI Match'}
+                </button>
               </>
             )}
             {role === 'RECRUITER' && job.recruiterId === session?.user?.id && (
@@ -140,6 +180,18 @@ export default function JobDetailPage() {
               </>
             )}
           </div>
+
+          {/* AI Match Insights */}
+          {aiMatch && (
+            <div className="mb-6 p-5 bg-notion-purple-bg/30 border border-notion-purple/20 rounded-xl">
+              <div className="flex items-center gap-2 mb-3 text-notion-purple font-semibold">
+                <Bot size={18} /> AI Match Insights <span className="ml-2 bg-notion-purple text-white px-2 py-0.5 rounded text-xs">Score: {aiMatch.score}%</span>
+              </div>
+              <p className="text-sm text-notion-text-secondary leading-relaxed">
+                {aiMatch.insights}
+              </p>
+            </div>
+          )}
 
           {/* Description */}
           <div className="border-t border-notion-border pt-6">
@@ -229,7 +281,18 @@ export default function JobDetailPage() {
               <button onClick={() => setShowApplyModal(false)} className="text-notion-text-tertiary hover:text-notion-text">✕</button>
             </div>
             <div className="p-5">
-              <label className="block text-sm font-medium text-notion-text mb-2">Cover Letter (optional)</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-notion-text">Cover Letter (optional)</label>
+                <button
+                  type="button"
+                  onClick={handleGenerateCoverLetter}
+                  disabled={generatingCoverLetter}
+                  className="text-xs flex items-center gap-1 text-notion-purple hover:text-notion-purple/80 font-medium"
+                >
+                  {generatingCoverLetter ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                  {generatingCoverLetter ? 'Generating...' : '✨ Draft with AI'}
+                </button>
+              </div>
               <textarea
                 value={coverLetter}
                 onChange={(e) => setCoverLetter(e.target.value)}

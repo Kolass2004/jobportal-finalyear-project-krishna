@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
+import FloatingChatbot from '@/components/FloatingChatbot';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
@@ -31,11 +32,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen bg-notion-bg">
       <Sidebar />
-      <main className="flex-1 ml-0 md:ml-[260px] min-h-screen">
+      <main className="flex-1 ml-0 md:ml-[260px] min-h-screen relative">
         <div className="p-6 md:p-8 max-w-[1200px] mx-auto">
           {children}
         </div>
       </main>
+      <FloatingChatbot />
     </div>
   );
 }

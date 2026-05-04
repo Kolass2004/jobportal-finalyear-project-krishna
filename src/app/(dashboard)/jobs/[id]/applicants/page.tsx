@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
-import { ArrowLeft, Check, X, User } from 'lucide-react';
+import { ArrowLeft, Check, X, User, Sparkles, Loader2 } from 'lucide-react';
 
 export default function ApplicantsPage() {
   const { id } = useParams();
@@ -11,6 +11,23 @@ export default function ApplicantsPage() {
   const { addToast } = useToast();
   const [applicants, setApplicants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [analyzingFit, setAnalyzingFit] = useState<Record<string, boolean>>({});
+
+  const analyzeFit = async (appId: string) => {
+    setAnalyzingFit(prev => ({ ...prev, [appId]: true }));
+    try {
+      const res = await fetch(`/api/applications/${appId}/ai-fit`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setApplicants(prev => prev.map(a => a.id === appId ? { ...a, aiFit: data } : a));
+      } else {
+        addToast(data.error || 'Failed to analyze fit', 'error');
+      }
+    } catch {
+      addToast('Something went wrong', 'error');
+    }
+    setAnalyzingFit(prev => ({ ...prev, [appId]: false }));
+  };
 
   useEffect(() => {
     fetch(`/api/jobs/${id}/applicants`).then(r => r.json()).then(setApplicants).finally(() => setLoading(false));
@@ -57,9 +74,26 @@ export default function ApplicantsPage() {
               {app.coverLetter && (
                 <p className="text-xs text-notion-text-tertiary mt-1 line-clamp-2">{app.coverLetter}</p>
               )}
+              {app.aiFit && (
+                <div className="mt-2 bg-notion-bg-secondary p-2 rounded text-xs border border-notion-border-light">
+                  <div className="font-semibold text-notion-purple flex items-center gap-1 mb-1">
+                    <Sparkles size={12} /> Fit Score: {app.aiFit.score}%
+                  </div>
+                  <p className="text-notion-text-secondary leading-relaxed">{app.aiFit.summary}</p>
+                </div>
+              )}
             </div>
             <span className={statusBadge(app.status)}>{app.status}</span>
-            <div className="flex gap-1">
+            <div className="flex flex-col gap-2 items-end">
+              <button 
+                onClick={() => analyzeFit(app.id)} 
+                disabled={analyzingFit[app.id]}
+                className="text-xs flex items-center gap-1 text-notion-purple hover:text-notion-purple/80 font-medium"
+              >
+                {analyzingFit[app.id] ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                {analyzingFit[app.id] ? 'Analyzing...' : '✨ Analyze Fit'}
+              </button>
+              <div className="flex gap-1">
               <select
                 value={app.status}
                 onChange={(e) => updateStatus(app.id, e.target.value)}
@@ -74,6 +108,7 @@ export default function ApplicantsPage() {
               <button onClick={() => router.push(`/users/${app.user?.id}`)} className="btn-ghost p-1.5" title="View Profile">
                 <User size={14} />
               </button>
+              </div>
             </div>
           </div>
         ))}
