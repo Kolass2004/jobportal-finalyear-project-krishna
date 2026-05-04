@@ -3,7 +3,7 @@ import './globals.css';
 import Providers from '@/components/Providers';
 
 export const metadata: Metadata = {
-  title: 'HireFlow — Modern Job Portal',
+  title: ' Talentmatch Job Portal',
   description: 'Find your dream job or discover amazing talent. A modern job portal with Notion-style design.',
 };
 
