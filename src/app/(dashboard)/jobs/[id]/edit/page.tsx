@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Bot } from 'lucide-react';
 
 export default function EditJobPage() {
   const { id } = useParams();
@@ -11,6 +11,7 @@ export default function EditJobPage() {
   const { addToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
   const [form, setForm] = useState<any>({});
 
   useEffect(() => {
@@ -24,6 +25,28 @@ export default function EditJobPage() {
       });
     }).finally(() => setLoading(false));
   }, [id]);
+
+  const optimizePost = async () => {
+    if (!form.description) return addToast('Please enter a description first', 'error');
+    setOptimizing(true);
+    try {
+      const res = await fetch(`/api/jobs/${id}/ai-optimize-post`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: form.title, description: form.description })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setForm({ ...form, description: data.optimized });
+        addToast('Job description optimized!', 'success');
+      } else {
+        addToast(data.error || 'Failed to optimize', 'error');
+      }
+    } catch {
+      addToast('Something went wrong', 'error');
+    }
+    setOptimizing(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,8 +73,19 @@ export default function EditJobPage() {
           <input value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="notion-input" required />
         </div>
         <div>
-          <label className="block text-sm font-medium text-notion-text mb-2">Description</label>
-          <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="notion-textarea min-h-[200px]" required />
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-notion-text">Description</label>
+            <button 
+              type="button" 
+              onClick={optimizePost} 
+              disabled={optimizing}
+              className="text-xs flex items-center gap-1 text-notion-purple hover:text-notion-purple/80 font-medium bg-notion-purple-bg px-2 py-1 rounded"
+            >
+              {optimizing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              {optimizing ? 'Optimizing...' : '✨ Optimize Post'}
+            </button>
+          </div>
+          <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="notion-textarea min-h-[300px]" required />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>

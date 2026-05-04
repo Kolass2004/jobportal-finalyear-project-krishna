@@ -3,7 +3,8 @@
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Briefcase, Building2, Users, FileText, TrendingUp, Clock, BookmarkCheck, Eye, ArrowRight, Zap } from 'lucide-react';
+import { Briefcase, Building2, Users, FileText, TrendingUp, Clock, BookmarkCheck, Eye, ArrowRight, Zap, Sparkles, Bot, Loader2 } from 'lucide-react';
+import { useToast } from '@/components/Toast';
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -11,6 +12,9 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const [recentJobs, setRecentJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [generatingAdvice, setGeneratingAdvice] = useState(false);
+  const [careerAdvice, setCareerAdvice] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,6 +35,42 @@ export default function DashboardPage() {
     };
     fetchData();
   }, []);
+
+  const generateCareerAdvice = async () => {
+    setGeneratingAdvice(true);
+    try {
+      const res = await fetch('/api/profile/ai-career-advice', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setCareerAdvice(data.advice);
+        addToast('Career advice generated!', 'success');
+      } else {
+        addToast(data.error || 'Failed to generate', 'error');
+      }
+    } catch {
+      addToast('Something went wrong', 'error');
+    }
+    setGeneratingAdvice(false);
+  };
+
+  const renderMarkdown = (text: string) => {
+    return text.split('\n').map((line, i) => {
+      if (line.startsWith('### ')) return <h5 key={i} className="font-semibold mt-4 mb-2 text-notion-text">{line.slice(4)}</h5>;
+      if (line.startsWith('- ') || line.match(/^\d+\.\s/)) return <li key={i} className="ml-4 list-disc mb-1">{line.replace(/^(- |\d+\.\s)/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>;
+      if (line.trim() === '') return <div key={i} className="h-2" />;
+      
+      const parts = line.split(/(\*\*.*?\*\*)/g);
+      return (
+        <p key={i} className="mb-2 leading-relaxed text-notion-text-secondary">
+          {parts.map((part, j) => 
+            part.startsWith('**') && part.endsWith('**') 
+              ? <strong key={j} className="text-notion-text">{part.slice(2, -2)}</strong> 
+              : part
+          )}
+        </p>
+      );
+    });
+  };
 
   if (loading) {
     return (
@@ -116,6 +156,42 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* AI Career Advice */}
+      {role === 'JOBSEEKER' && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-notion-text tracking-tight">AI Career Counselor</h2>
+            <button
+              onClick={generateCareerAdvice}
+              disabled={generatingAdvice}
+              className="text-sm flex items-center gap-2 text-notion-purple font-medium hover:text-notion-purple/80 transition-colors"
+            >
+              {generatingAdvice ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+              {generatingAdvice ? 'Analyzing Profile...' : '✨ Get Career Advice'}
+            </button>
+          </div>
+          
+          {careerAdvice ? (
+            <div className="p-6 bg-notion-purple-bg/30 border border-notion-purple/20 rounded-xl text-sm">
+              <div className="flex items-center gap-2 mb-4 text-notion-purple font-semibold text-base">
+                <Bot size={20} /> Your Personalized Career Paths
+              </div>
+              <div className="space-y-1">
+                {renderMarkdown(careerAdvice)}
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 border border-dashed border-notion-border rounded-xl text-center bg-notion-bg">
+              <Sparkles size={24} className="mx-auto mb-3 text-notion-purple/50" />
+              <p className="text-sm text-notion-text-secondary mb-2">Want to know what roles you should target next?</p>
+              <button onClick={generateCareerAdvice} disabled={generatingAdvice} className="text-sm text-notion-purple font-medium hover:underline">
+                Generate AI Career Advice based on your profile
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Recent Jobs */}
       <div>

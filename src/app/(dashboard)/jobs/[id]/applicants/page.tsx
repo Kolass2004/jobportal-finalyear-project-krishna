@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
-import { ArrowLeft, Check, X, User, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, X, User, Sparkles, Loader2, Bot, Mail, MessageSquare } from 'lucide-react';
 
 export default function ApplicantsPage() {
   const { id } = useParams();
@@ -12,6 +12,8 @@ export default function ApplicantsPage() {
   const [applicants, setApplicants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [analyzingFit, setAnalyzingFit] = useState<Record<string, boolean>>({});
+  const [generatingQuestions, setGeneratingQuestions] = useState<Record<string, boolean>>({});
+  const [draftingMessage, setDraftingMessage] = useState<Record<string, boolean>>({});
 
   const analyzeFit = async (appId: string) => {
     setAnalyzingFit(prev => ({ ...prev, [appId]: true }));
@@ -27,6 +29,44 @@ export default function ApplicantsPage() {
       addToast('Something went wrong', 'error');
     }
     setAnalyzingFit(prev => ({ ...prev, [appId]: false }));
+  };
+
+  const generateQuestions = async (appId: string) => {
+    setGeneratingQuestions(prev => ({ ...prev, [appId]: true }));
+    try {
+      const res = await fetch(`/api/applications/${appId}/ai-recruiter-questions`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setApplicants(prev => prev.map(a => a.id === appId ? { ...a, aiQuestions: data.questions } : a));
+        addToast('Interview questions generated!', 'success');
+      } else {
+        addToast(data.error || 'Failed to generate questions', 'error');
+      }
+    } catch {
+      addToast('Something went wrong', 'error');
+    }
+    setGeneratingQuestions(prev => ({ ...prev, [appId]: false }));
+  };
+
+  const draftOutreach = async (appId: string, type: 'INTERVIEW' | 'REJECTION') => {
+    setDraftingMessage(prev => ({ ...prev, [appId]: true }));
+    try {
+      const res = await fetch(`/api/applications/${appId}/ai-outreach`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setApplicants(prev => prev.map(a => a.id === appId ? { ...a, aiMessage: data.message } : a));
+        addToast('Draft created!', 'success');
+      } else {
+        addToast(data.error || 'Failed to draft message', 'error');
+      }
+    } catch {
+      addToast('Something went wrong', 'error');
+    }
+    setDraftingMessage(prev => ({ ...prev, [appId]: false }));
   };
 
   useEffect(() => {
@@ -82,6 +122,22 @@ export default function ApplicantsPage() {
                   <p className="text-notion-text-secondary leading-relaxed">{app.aiFit.summary}</p>
                 </div>
               )}
+              {app.aiQuestions && (
+                <div className="mt-2 bg-notion-purple-bg/30 p-3 rounded-lg text-xs border border-notion-purple/20 text-notion-text-secondary">
+                  <div className="font-semibold text-notion-purple flex items-center gap-1 mb-2">
+                    <Bot size={12} /> Interview Questions
+                  </div>
+                  <div className="whitespace-pre-wrap">{app.aiQuestions}</div>
+                </div>
+              )}
+              {app.aiMessage && (
+                <div className="mt-2 bg-notion-blue-bg/30 p-3 rounded-lg text-xs border border-notion-blue/20 text-notion-text-secondary">
+                  <div className="font-semibold text-notion-blue flex items-center gap-1 mb-2">
+                    <Mail size={12} /> Outreach Draft
+                  </div>
+                  <div className="whitespace-pre-wrap">{app.aiMessage}</div>
+                </div>
+              )}
             </div>
             <span className={statusBadge(app.status)}>{app.status}</span>
             <div className="flex flex-col gap-2 items-end">
@@ -93,6 +149,22 @@ export default function ApplicantsPage() {
                 {analyzingFit[app.id] ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                 {analyzingFit[app.id] ? 'Analyzing...' : '✨ Analyze Fit'}
               </button>
+              <button 
+                onClick={() => generateQuestions(app.id)} 
+                disabled={generatingQuestions[app.id]}
+                className="text-xs flex items-center gap-1 text-notion-purple hover:text-notion-purple/80 font-medium"
+              >
+                {generatingQuestions[app.id] ? <Loader2 size={12} className="animate-spin" /> : <MessageSquare size={12} />}
+                {generatingQuestions[app.id] ? 'Generating...' : '✨ Prep Questions'}
+              </button>
+              
+              <div className="flex gap-2 items-center text-xs text-notion-purple font-medium">
+                <Mail size={12} /> ✨ Draft:
+                <button disabled={draftingMessage[app.id]} onClick={() => draftOutreach(app.id, 'INTERVIEW')} className="hover:underline">Invite</button>
+                <span>|</span>
+                <button disabled={draftingMessage[app.id]} onClick={() => draftOutreach(app.id, 'REJECTION')} className="hover:underline">Reject</button>
+                {draftingMessage[app.id] && <Loader2 size={12} className="animate-spin ml-1" />}
+              </div>
               <div className="flex gap-1">
               <select
                 value={app.status}
